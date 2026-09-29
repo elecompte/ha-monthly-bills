@@ -4,6 +4,7 @@ import asyncio
 from datetime import date
 import logging
 import re
+import datetime as dt
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -39,14 +40,26 @@ UPDATE_SCHEMA = vol.Schema({
 TARGET_SCHEMA = vol.Schema({vol.Required("bill_id"): ID})
 
 
-def checked_date(value: str | date) -> date:
-    """Accept the UI's date value and the ISO string used by HA actions."""
+def checked_date(value):
+    """Validate and normalize a date to YYYY-MM-DD."""
     try:
-        if isinstance(value, date):
-            return value
-        return date.fromisoformat(str(value))
+        if isinstance(value, dt.datetime):
+            return value.date().isoformat()
+
+        if isinstance(value, dt.date):
+            return value.isoformat()
+
+        if isinstance(value, str):
+            return dt.date.fromisoformat(value).isoformat()
+
     except (ValueError, TypeError) as err:
-        raise HomeAssistantError("due_date must be a real date (YYYY-MM-DD)") from err
+        raise HomeAssistantError(
+            "due_date must be a real date (YYYY-MM-DD)"
+        ) from err
+
+    raise HomeAssistantError(
+        "due_date must be a real date (YYYY-MM-DD)"
+    )
 
 
 class BillManager:
