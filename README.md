@@ -1,4 +1,4 @@
-# Monthly Bills for Home Assistant — 0.2.1
+# Monthly Bills for Home Assistant
 
 An experimental local custom integration. **Back up your Home Assistant configuration, including `.storage/monthly_bills.data`, before updating.** This version reuses the existing storage key and original sensor unique IDs, so existing bill records and status sensor registry entries should persist.
 
