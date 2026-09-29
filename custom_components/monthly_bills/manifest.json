@@ -1,9 +1,8 @@
 {
   "domain": "monthly_bills",
   "name": "Monthly Bills",
-  "version": "0.2.0",
-  "documentation": "https://github.com/elecompte/ha-monthly-bills",
-  "codeowners": "elecompte",
+  "version": "0.2.1",
+  "documentation": "https://developers.home-assistant.io/docs/creating_integration_file_structure/",
   "config_flow": true,
   "single_config_entry": true,
   "integration_type": "hub",

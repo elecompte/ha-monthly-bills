@@ -39,10 +39,13 @@ UPDATE_SCHEMA = vol.Schema({
 TARGET_SCHEMA = vol.Schema({vol.Required("bill_id"): ID})
 
 
-def checked_date(value: str) -> date:
+def checked_date(value: str | date) -> date:
+    """Accept the UI's date value and the ISO string used by HA actions."""
     try:
-        return date.fromisoformat(value)
-    except ValueError as err:
+        if isinstance(value, date):
+            return value
+        return date.fromisoformat(str(value))
+    except (ValueError, TypeError) as err:
         raise HomeAssistantError("due_date must be a real date (YYYY-MM-DD)") from err
 
 
@@ -68,7 +71,14 @@ class BillManager:
 
     async def add(self, data: dict):
         due = checked_date(data["due_date"])
-        base = re.sub(r"[^a-z0-9]+", "_", data["name"].lower()).strip("_") or "bill"
+        name = str(data["name"]).strip()
+        if not name:
+            raise HomeAssistantError("Bill name cannot be blank")
+        amount = round(float(data["cost"]), 2)
+        if not 0 <= amount <= 100000000:
+            raise HomeAssistantError("Bill amount is out of range")
+        category = str(data.get("category") or "Other").strip() or "Other"
+        base = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "bill"
         async with self.lock:
             bill_id = base
             index = 2
@@ -77,11 +87,11 @@ class BillManager:
                 index += 1
             self.bills[bill_id] = {
                 "id": bill_id,
-                "name": data["name"].strip(),
-                "cost": round(data["cost"], 2),
+                "name": name,
+                "cost": amount,
                 "due_date": due.isoformat(),
                 "due_day": due.day,
-                "category": data["category"].strip() or "Other",
+                "category": category,
                 "paid": False,
                 "paid_on": None,
                 "history": [],

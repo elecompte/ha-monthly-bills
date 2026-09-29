@@ -1,8 +1,11 @@
 """Integration setup and bill management in the integration Options UI."""
+import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from .const import DOMAIN
 from homeassistant.helpers import selector
+
+_LOGGER = logging.getLogger(__name__)
 
 ADD_FORM = vol.Schema({
     vol.Required("name"): selector.TextSelector(),
@@ -35,7 +38,23 @@ class MonthlyBillsOptionsFlow(config_entries.OptionsFlow):
             try:
                 await manager.add(user_input)
             except Exception:
-                return self.async_show_form(step_id="add", data_schema=ADD_FORM, errors={"base": "invalid_bill"})
+                # Never mask unexpected code/runtime errors as missing user input.
+                _LOGGER.exception("Unable to add Monthly Bills record; input=%s", {
+                    "name": user_input.get("name"),
+                    "cost": user_input.get("cost"),
+                    "due_date": str(user_input.get("due_date")),
+                    "category": user_input.get("category"),
+                })
+                return self.async_show_form(
+                    step_id="add",
+                    data_schema=vol.Schema({
+                        vol.Required("name", description={"suggested_value": user_input.get("name", "")}): selector.TextSelector(),
+                        vol.Required("cost", description={"suggested_value": user_input.get("cost", 0)}): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=100000000, step=0.01, mode=selector.NumberSelectorMode.BOX)),
+                        vol.Required("due_date", description={"suggested_value": str(user_input.get("due_date", ""))}): selector.DateSelector(),
+                        vol.Optional("category", default="Other", description={"suggested_value": user_input.get("category", "Other")}): selector.TextSelector(),
+                    }),
+                    errors={"base": "add_failed"},
+                )
             return self.async_create_entry(title="", data={})
         return self.async_show_form(step_id="add", data_schema=ADD_FORM)
 

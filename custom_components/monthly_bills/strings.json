@@ -35,7 +35,8 @@
       }
     },
     "error": {
-      "invalid_bill": "Please provide a valid bill name, cost, and due date."
+      "invalid_bill": "Please provide a valid bill name, cost, and due date.",
+      "add_failed": "Could not save bill. Your entries have been retained. Check the Home Assistant log for the specific error."
     },
     "abort": {
       "no_bills": "There are no bills to delete."
