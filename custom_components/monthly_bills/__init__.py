@@ -5,6 +5,8 @@ from datetime import date
 import logging
 import re
 import datetime as dt
+from datetime import date as datetime_date
+from datetime import datetime as datetime_datetime
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -41,16 +43,17 @@ TARGET_SCHEMA = vol.Schema({vol.Required("bill_id"): ID})
 
 
 def checked_date(value):
-    """Validate and normalize a date to YYYY-MM-DD."""
-    try:
-        if isinstance(value, dt.datetime):
-            return value.date().isoformat()
+    """Validate a date and return a Python date object."""
 
-        if isinstance(value, dt.date):
-            return value.isoformat()
+    try:
+        if isinstance(value, datetime_datetime):
+            return value.date()
+
+        if isinstance(value, datetime_date):
+            return value
 
         if isinstance(value, str):
-            return dt.date.fromisoformat(value).isoformat()
+            return datetime_date.fromisoformat(value)
 
     except (ValueError, TypeError) as err:
         raise HomeAssistantError(
@@ -60,8 +63,7 @@ def checked_date(value):
     raise HomeAssistantError(
         "due_date must be a real date (YYYY-MM-DD)"
     )
-
-
+    
 class BillManager:
     """Own and persist all bills for the single configuration entry."""
 
