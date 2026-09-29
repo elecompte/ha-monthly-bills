@@ -1,4 +1,4 @@
-# Monthly Bills for Home Assistant — 0.2.0
+# Monthly Bills for Home Assistant — 0.2.1
 
 An experimental local custom integration. **Back up your Home Assistant configuration, including `.storage/monthly_bills.data`, before updating.** This version reuses the existing storage key and original sensor unique IDs, so existing bill records and status sensor registry entries should persist.
 
@@ -24,3 +24,6 @@ The original `monthly_bills.add_bill`, `update_bill`, `mark_paid`, `mark_unpaid`
 ## Caveats
 
 This is a locally generated prototype, not an official Home Assistant integration and not tested in a live Home Assistant runtime. First test with one bill and check Settings → System → Logs after upgrading. No live payment processing is performed.
+
+## Version 0.2.1 fix
+Corrects Add bill input normalization (date and numeric values), ensures missing optional category is handled, preserves entered values when a save fails, and writes the real exception to the HA logs as `Unable to add Monthly Bills record`. Replaces the generic misleading validation message. Does not change the storage schema.
