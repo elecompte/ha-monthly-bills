@@ -1,12 +1,13 @@
 {
   "domain": "monthly_bills",
   "name": "Monthly Bills",
-  "version": "0.2.1",
-  "documentation": "https://developers.home-assistant.io/docs/creating_integration_file_structure/",
+  "version": "0.2.4",
+  "documentation": "https://github.com/elecompte/ha-monthly-bills",
+  "issue_tracker": "https://github.com/elecompte/ha-monthly-bills/issues",
   "config_flow": true,
   "single_config_entry": true,
   "integration_type": "hub",
   "iot_class": "local_push",
   "requirements": [],
-  "codeowners": []
+  "codeowners": "elecompte"
 }
