@@ -1,3 +1,17 @@
+update_last_payment_date:
+  name: Correct last payment date
+  description: Corrects the latest recorded payment date and Last Paid display. Does not record a payment, advance the due date, or change paid status. Future dates are rejected.
+  fields:
+    bill_id:
+      name: Bill ID
+      required: true
+      selector:
+        text: {}
+    paid_on:
+      name: Correct payment date
+      required: true
+      selector:
+        date: {}
 add_bill:
   name: Add bill
   description: Creates a monthly bill sensor. Its bill_id is derived from its name (e.g. Electric -> electric).

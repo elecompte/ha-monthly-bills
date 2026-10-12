@@ -1,6 +1,29 @@
-# Monthly Bills for Home Assistant — v0.3.0
+# Monthly Bills for Home Assistant — v0.3.3
 
 A local, editable monthly bill tracker. This release upgrades the v0.2.3 source and retains the storage key, bill IDs, device identifiers, and all existing entity unique IDs.
+
+## v0.3.3 — Correct the latest payment date
+
+Automatic payment recording, monthly date advancement, and the upcoming threshold continue as before. Each bill now exposes a date entity named **Last payment date**, normally `date.rent_last_payment_date` for Rent. Open this entity's More Info dialog to correct the latest payment date. The existing `sensor.rent_last_paid` and status sensor's `last_paid_on` attribute reflect the correction, so existing cards need no changes.
+
+The editor changes the last archived payment's `paid_on` date, or the current unarchived payment when auto advance is disabled. It keeps the related payment date fields consistent. Older history entries, amount, billing-cycle due date, next due date, and paid status remain unchanged. It does not record a new payment or advance a month. A bill with no recorded payment cannot be backfilled through this correction control; first record the real payment. Invalid and future dates are rejected.
+
+To correct through Developer Tools → Actions:
+
+```yaml
+action: monthly_bills.update_last_payment_date
+data:
+  bill_id: rent
+  paid_on: "2026-10-01"
+```
+
+Example: a test payment recorded on October 12 advanced the bill to November 1. Correcting the payment date to October 1 updates the last payment history record and card's Last paid date, while keeping November 1 as the next due date.
+
+A separate internal recording date preserves same-day retry protection when the displayed payment date is corrected. Existing records are migrated automatically; the storage key/version and all existing entity IDs remain unchanged.
+
+Upload this package's extracted contents to the existing repository root, commit, and publish release **0.3.3** pointing to that commit. Update through HACS and restart Home Assistant. The manifest contains the repository URLs and `codeowners` list for `elecompte/ha-monthly-bills`.
+
+Validation: 26 automated billing/manager tests passed with in-memory Home Assistant doubles, plus Python syntax and JSON/YAML checks. Live Home Assistant validation is still needed.
 
 ## Upgrade
 

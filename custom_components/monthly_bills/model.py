@@ -21,6 +21,7 @@ def migrate_bill(bill: dict) -> dict:
     previous_paid = next((item.get("paid_on") for item in reversed(bill.get("history", []))
                           if item.get("paid_on")), None)
     bill.setdefault("last_paid_on", bill.get("paid_on") or previous_paid)
+    bill.setdefault("last_payment_recorded_on", bill.get("last_paid_on"))
     bill.setdefault("last_paid_due_date", None)
     bill.setdefault("auto_advanced", False)
     bill.setdefault("due_day", date.fromisoformat(bill["due_date"]).day)
@@ -76,13 +77,14 @@ def record_payment(bill: dict, today: date, explicit: bool = False) -> dict:
         return bill
     # A late payment or long threshold can reopen immediately. Retry calls on
     # the same day must still not pay multiple cycles; use explicit early pay.
-    if not explicit and bill.get("auto_advanced") and bill.get("last_paid_on") == today.isoformat():
+    if not explicit and bill.get("auto_advanced") and bill.get("last_payment_recorded_on", bill.get("last_paid_on")) == today.isoformat():
         return bill
     if bill.get("last_paid_due_date") == bill["due_date"]:
         return bill
     bill["paid"] = True
     bill["paid_on"] = today.isoformat()
     bill["last_paid_on"] = today.isoformat()
+    bill["last_payment_recorded_on"] = today.isoformat()
     bill["last_paid_due_date"] = bill["due_date"]
     bill["auto_advanced"] = False
     if bill["auto_advance_due_date"]:
@@ -90,6 +92,33 @@ def record_payment(bill: dict, today: date, explicit: bool = False) -> dict:
         bill["due_date"] = next_due_date(bill)
         bill["auto_advanced"] = True
     return refresh_bill(bill, today)
+
+
+def correct_last_payment_date(bill: dict, paid_on: date) -> dict:
+    """Correct the latest payment, without opening or advancing a cycle."""
+    bill = deepcopy(bill)
+    # Retain the recording date for same-day retry protection when backdating.
+    bill.setdefault("last_payment_recorded_on", bill.get("last_paid_on"))
+    current_payment = (
+        bill.get("paid_on") is not None
+        and not bill.get("auto_advanced", False)
+        and bill.get("last_paid_due_date") in (None, bill["due_date"])
+    )
+    if current_payment:
+        bill["paid_on"] = paid_on.isoformat()
+    else:
+        history = bill.get("history", [])
+        if not history or history[-1].get("payment_status") != "Paid":
+            raise ValueError("No recorded payment to correct. Record a payment first.")
+        latest = history[-1]
+        if bill.get("last_paid_due_date") not in (None, latest["due_date"]):
+            raise ValueError("Latest payment does not match the last history record.")
+        latest["paid_on"] = paid_on.isoformat()
+        # Paid acknowledgement may still refer to the just-archived payment.
+        if bill.get("auto_advanced") and bill.get("paid_on") is not None:
+            bill["paid_on"] = paid_on.isoformat()
+    bill["last_paid_on"] = paid_on.isoformat()
+    return bill
 
 
 def reopen_bill(bill: dict) -> dict:

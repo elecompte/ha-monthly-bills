@@ -15,7 +15,7 @@ from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, SIGNAL_CHANGED, STORE_KEY, STORE_VERSION
-from .model import checked_threshold, migrate_bill, record_payment, refresh_bill, reopen_bill, roll_bill
+from .model import checked_threshold, correct_last_payment_date, migrate_bill, record_payment, refresh_bill, reopen_bill, roll_bill
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor", "number", "date", "switch", "text"]
@@ -42,6 +42,10 @@ UPDATE_SCHEMA = vol.Schema({
     vol.Optional("upcoming_threshold_days"): THRESHOLD,
 })
 TARGET_SCHEMA = vol.Schema({vol.Required("bill_id"): ID})
+PAYMENT_DATE_SCHEMA = vol.Schema({
+    vol.Required("bill_id"): ID,
+    vol.Required("paid_on"): DATE,
+})
 
 
 def checked_date(value: str | datetime_date) -> datetime_date:
@@ -158,6 +162,21 @@ class BillManager:
                 raise HomeAssistantError(str(err)) from err
             await self.save()
 
+    async def correct_payment_date(self, bill_id: str, paid_on: str | datetime_date):
+        """Edit a recorded payment date, preserving due date and status."""
+        paid_date = checked_date(paid_on)
+        if paid_date > dt_util.now().date():
+            raise HomeAssistantError("Payment date cannot be in the future")
+        async with self.lock:
+            bill = self.get(bill_id)
+            try:
+                updated = correct_last_payment_date(bill, paid_date)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
+            if updated != bill:
+                self.bills[bill_id] = updated
+                await self.save()
+
     async def delete(self, bill_id: str):
         async with self.lock:
             self.get(bill_id)
@@ -201,6 +220,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async def mark_unpaid(call: ServiceCall):
         await manager().set_paid(call.data["bill_id"], False)
 
+    async def update_last_payment_date(call: ServiceCall):
+        await manager().correct_payment_date(call.data["bill_id"], call.data["paid_on"])
+
     async def rollover(call: ServiceCall):
         await manager().rollover(call.data["bill_id"])
 
@@ -212,6 +234,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.services.async_register(DOMAIN, "mark_paid", mark_paid, schema=TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, "pay_next_cycle", pay_next_cycle, schema=TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, "mark_unpaid", mark_unpaid, schema=TARGET_SCHEMA)
+    hass.services.async_register(DOMAIN, "update_last_payment_date", update_last_payment_date, schema=PAYMENT_DATE_SCHEMA)
     hass.services.async_register(DOMAIN, "rollover", rollover, schema=TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, "delete_bill", delete_bill, schema=TARGET_SCHEMA)
     return True
