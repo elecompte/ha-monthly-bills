@@ -25,6 +25,18 @@ add_bill:
       name: Category
       selector:
         text: {}
+    auto_advance_due_date:
+      name: Automatically advance due date
+      selector:
+        boolean: {}
+    upcoming_threshold_days:
+      name: Upcoming threshold (days)
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 1
+          mode: box
 update_bill:
   name: Edit bill
   description: Change any listed field of an existing bill. Leave unwanted fields omitted in YAML mode.
@@ -54,6 +66,18 @@ update_bill:
       name: Category
       selector:
         text: {}
+    auto_advance_due_date:
+      name: Automatically advance due date
+      selector:
+        boolean: {}
+    upcoming_threshold_days:
+      name: Upcoming threshold (days)
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 1
+          mode: box
 mark_paid:
   name: Mark paid
   fields:
@@ -72,7 +96,7 @@ mark_unpaid:
         text: {}
 rollover:
   name: Advance to next month
-  description: Archives a paid occurrence and opens next month's occurrence. Unpaid bills cannot be rolled over.
+  description: Archives a paid, unadvanced occurrence and opens next month. Rejects already auto-advanced cycles.
   fields:
     bill_id:
       name: Bill ID
@@ -82,6 +106,15 @@ rollover:
 delete_bill:
   name: Delete bill
   description: Permanently removes the bill and its stored history.
+  fields:
+    bill_id:
+      name: Bill ID
+      required: true
+      selector:
+        text: {}
+pay_next_cycle:
+  name: Pay next cycle early
+  description: Records a new payment for the displayed due date even while status is Paid from the previous cycle. Every call may pay another cycle; do not use for retrying mark_paid.
   fields:
     bill_id:
       name: Bill ID

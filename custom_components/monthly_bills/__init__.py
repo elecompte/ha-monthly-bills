@@ -1,12 +1,9 @@
 """Monthly Bills: editable local bill storage and actions."""
 
 import asyncio
-from datetime import date
+from datetime import date as datetime_date
 import logging
 import re
-import datetime as dt
-from datetime import date as datetime_date
-from datetime import datetime as datetime_datetime
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -18,12 +15,13 @@ from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, SIGNAL_CHANGED, STORE_KEY, STORE_VERSION
-from .model import roll_bill, status_for
+from .model import checked_threshold, migrate_bill, record_payment, refresh_bill, reopen_bill, roll_bill
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["sensor", "number", "date", "switch", "text"]
 COST = vol.All(vol.Coerce(float), vol.Range(min=0, max=100000000))
 DATE = vol.Match(r"^\d{4}-\d{2}-\d{2}$")
+THRESHOLD = checked_threshold
 ID = vol.Match(r"^[a-z0-9_]+$")
 
 ADD_SCHEMA = vol.Schema({
@@ -31,6 +29,8 @@ ADD_SCHEMA = vol.Schema({
     vol.Required("cost"): COST,
     vol.Required("due_date"): DATE,
     vol.Optional("category", default="Other"): str,
+    vol.Optional("auto_advance_due_date", default=True): bool,
+    vol.Optional("upcoming_threshold_days", default=7): THRESHOLD,
 })
 UPDATE_SCHEMA = vol.Schema({
     vol.Required("bill_id"): ID,
@@ -38,32 +38,22 @@ UPDATE_SCHEMA = vol.Schema({
     vol.Optional("cost"): COST,
     vol.Optional("due_date"): DATE,
     vol.Optional("category"): str,
+    vol.Optional("auto_advance_due_date"): bool,
+    vol.Optional("upcoming_threshold_days"): THRESHOLD,
 })
 TARGET_SCHEMA = vol.Schema({vol.Required("bill_id"): ID})
 
 
-def checked_date(value):
-    """Validate a date and return a Python date object."""
-
+def checked_date(value: str | datetime_date) -> datetime_date:
+    """Accept the UI's date value and the ISO string used by HA actions."""
     try:
-        if isinstance(value, datetime_datetime):
-            return value.date()
-
         if isinstance(value, datetime_date):
             return value
-
-        if isinstance(value, str):
-            return datetime_date.fromisoformat(value)
-
+        return datetime_date.fromisoformat(str(value))
     except (ValueError, TypeError) as err:
-        raise HomeAssistantError(
-            "due_date must be a real date (YYYY-MM-DD)"
-        ) from err
+        raise HomeAssistantError("due_date must be a real date (YYYY-MM-DD)") from err
 
-    raise HomeAssistantError(
-        "due_date must be a real date (YYYY-MM-DD)"
-    )
-    
+
 class BillManager:
     """Own and persist all bills for the single configuration entry."""
 
@@ -75,7 +65,10 @@ class BillManager:
 
     async def load(self):
         data = await self.store.async_load() or {}
-        self.bills = data.get("bills", {})
+        old_bills = data.get("bills", {})
+        self.bills = {key: migrate_bill(bill) for key, bill in old_bills.items()}
+        if self.bills != old_bills:
+            await self.save()
 
     def notify(self):
         async_dispatcher_send(self.hass, SIGNAL_CHANGED)
@@ -110,6 +103,11 @@ class BillManager:
                 "paid": False,
                 "paid_on": None,
                 "history": [],
+                "auto_advance_due_date": bool(data.get("auto_advance_due_date", True)),
+                "upcoming_threshold_days": THRESHOLD(data.get("upcoming_threshold_days", 7)),
+                "last_paid_on": None,
+                "last_paid_due_date": None,
+                "auto_advanced": False,
             }
             await self.save()
         return bill_id
@@ -121,31 +119,43 @@ class BillManager:
 
     async def update(self, data: dict):
         async with self.lock:
-            bill = self.get(data["bill_id"])
+            # Validate on a copy so rejected edits cannot partially mutate storage.
+            bill = dict(self.get(data["bill_id"]))
             for field in ("name", "category"):
                 if field in data:
-                    bill[field] = data[field].strip()
+                    bill[field] = str(data[field]).strip()
+            if not bill["name"]:
+                raise HomeAssistantError("Bill name cannot be blank")
             if "cost" in data:
-                bill["cost"] = round(data["cost"], 2)
+                bill["cost"] = round(COST(data["cost"]), 2)
             if "due_date" in data:
                 due = checked_date(data["due_date"])
-                bill["due_date"] = due.isoformat()
-                bill["due_day"] = due.day
+                if due.isoformat() != bill["due_date"]:
+                    bill = reopen_bill(bill)
+                    bill["due_date"] = due.isoformat()
+                    bill["due_day"] = due.day
+            if "auto_advance_due_date" in data:
+                bill["auto_advance_due_date"] = bool(data["auto_advance_due_date"])
+            if "upcoming_threshold_days" in data:
+                bill["upcoming_threshold_days"] = THRESHOLD(data["upcoming_threshold_days"])
+            self.bills[data["bill_id"]] = refresh_bill(bill, dt_util.now().date())
             await self.save()
 
-    async def set_paid(self, bill_id: str, paid: bool):
+    async def set_paid(self, bill_id: str, paid: bool, explicit: bool = False):
         async with self.lock:
             bill = self.get(bill_id)
-            bill["paid"] = paid
-            bill["paid_on"] = dt_util.now().date().isoformat() if paid else None
-            await self.save()
+            updated = record_payment(bill, dt_util.now().date(), explicit) if paid else reopen_bill(bill)
+            if updated != bill:
+                self.bills[bill_id] = updated
+                await self.save()
 
     async def rollover(self, bill_id: str):
         async with self.lock:
-            bill = self.get(bill_id)
-            if not bill["paid"]:
-                raise HomeAssistantError("Mark this bill Paid before rolling it over; unpaid occurrences are retained.")
-            self.bills[bill_id] = roll_bill(bill)
+            bill = refresh_bill(self.get(bill_id), dt_util.now().date())
+            try:
+                self.bills[bill_id] = roll_bill(bill)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
             await self.save()
 
     async def delete(self, bill_id: str):
@@ -155,18 +165,15 @@ class BillManager:
             await self.save()
 
     async def daily_tick(self):
-        """Advance paid bills after their due dates; preserve unpaid overdue bills."""
+        """Refresh acknowledgement at the threshold; never advance dates here."""
         async with self.lock:
             today = dt_util.now().date()
-            changed = False
-            for key, bill in list(self.bills.items()):
-                if bill["paid"] and checked_date(bill["due_date"]) < today:
-                    self.bills[key] = roll_bill(bill)
-                    changed = True
-            if changed:
+            updated = {key: refresh_bill(bill, today) for key, bill in self.bills.items()}
+            if updated != self.bills:
+                self.bills = updated
                 await self.save()
             else:
-                self.notify()  # Upcoming -> Past Due at midnight
+                self.notify()
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -188,6 +195,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async def mark_paid(call: ServiceCall):
         await manager().set_paid(call.data["bill_id"], True)
 
+    async def pay_next_cycle(call: ServiceCall):
+        await manager().set_paid(call.data["bill_id"], True, explicit=True)
+
     async def mark_unpaid(call: ServiceCall):
         await manager().set_paid(call.data["bill_id"], False)
 
@@ -200,6 +210,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.services.async_register(DOMAIN, "add_bill", add_bill, schema=ADD_SCHEMA)
     hass.services.async_register(DOMAIN, "update_bill", update_bill, schema=UPDATE_SCHEMA)
     hass.services.async_register(DOMAIN, "mark_paid", mark_paid, schema=TARGET_SCHEMA)
+    hass.services.async_register(DOMAIN, "pay_next_cycle", pay_next_cycle, schema=TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, "mark_unpaid", mark_unpaid, schema=TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, "rollover", rollover, schema=TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, "delete_bill", delete_bill, schema=TARGET_SCHEMA)

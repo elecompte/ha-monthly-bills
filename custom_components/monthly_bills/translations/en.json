@@ -24,7 +24,9 @@
           "name": "Name",
           "cost": "Amount (USD)",
           "due_date": "First due date",
-          "category": "Category"
+          "category": "Category",
+          "auto_advance_due_date": "Automatically advance due date when paid",
+          "upcoming_threshold_days": "Upcoming threshold (days)"
         }
       },
       "delete": {
