@@ -1,6 +1,12 @@
-# Monthly Bills for Home Assistant — v0.3.3
+# Monthly Bills for Home Assistant — v0.3.4
 
 A local, editable monthly bill tracker. This release upgrades the v0.2.3 source and retains the storage key, bill IDs, device identifiers, and all existing entity unique IDs.
+
+## v0.3.4 — Fix latest-payment date correction
+
+Removes an overly strict comparison between the last archived payment's due date and the stored last-paid-cycle marker. Correcting the latest history record now works even when those two fields disagree. The editor leaves the billing-cycle marker, next due date, paid status, amount and earlier history entries unchanged. It continues to reject corrections when no payment record exists and rejects invalid or future dates. Current unarchived paid occurrences still take precedence over older archived payments.
+
+Publish release **0.3.4**, update through HACS, and restart Home Assistant. Then retry the existing Last payment date editor. No data-file editing is needed for this correction. All 28 automated tests pass, including mismatched markers both before and after the Upcoming transition. Live Home Assistant verification is still needed.
 
 ## v0.3.3 — Correct the latest payment date
 

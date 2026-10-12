@@ -267,4 +267,30 @@ class ManagerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.manager.bills['rent']['paid_on'],'2026-09-30')
         self.assertEqual(self.manager.bills['rent']['due_date'],'2026-10-01')
 
+    async def test_stale_cycle_marker_does_not_block_latest_history_correction(self):
+        import copy
+        await self.manager.set_paid('rent',True)
+        self.manager.bills['rent']['last_paid_due_date']='2026-09-01'
+        before=copy.deepcopy(self.manager.bills['rent'])
+        await self.manager.correct_payment_date('rent','2026-09-30')
+        after=self.manager.bills['rent']
+        self.assertEqual(after['history'][-1]['paid_on'],'2026-09-30')
+        self.assertEqual(after['last_paid_on'],'2026-09-30')
+        self.assertEqual(after['paid_on'],'2026-09-30')
+        for key in ['due_date','due_day','paid','auto_advanced','last_paid_due_date','last_payment_recorded_on']:
+            self.assertEqual(after[key],before[key])
+
+    async def test_stale_cycle_marker_after_upcoming_keeps_bill_unpaid(self):
+        await self.manager.set_paid('rent',True)
+        self.manager.bills['rent']['last_paid_due_date']='2026-09-01'
+        clock.today=date(2026,10,25)
+        await self.manager.daily_tick()
+        await self.manager.correct_payment_date('rent','2026-09-30')
+        after=self.manager.bills['rent']
+        self.assertIsNone(after['paid_on'])
+        self.assertFalse(after['paid'])
+        self.assertEqual(after['due_date'],'2026-11-01')
+        self.assertEqual(after['last_paid_due_date'],'2026-09-01')
+        self.assertEqual(after['history'][-1]['paid_on'],'2026-09-30')
+
 if __name__=='__main__': unittest.main()

@@ -111,8 +111,9 @@ def correct_last_payment_date(bill: dict, paid_on: date) -> dict:
         if not history or history[-1].get("payment_status") != "Paid":
             raise ValueError("No recorded payment to correct. Record a payment first.")
         latest = history[-1]
-        if bill.get("last_paid_due_date") not in (None, latest["due_date"]):
-            raise ValueError("Latest payment does not match the last history record.")
+        # This editor targets the last archived payment explicitly. Legacy or
+        # manually edited data may have a different last_paid_due_date marker;
+        # that marker must not block correction or be changed by this action.
         latest["paid_on"] = paid_on.isoformat()
         # Paid acknowledgement may still refer to the just-archived payment.
         if bill.get("auto_advanced") and bill.get("paid_on") is not None:
