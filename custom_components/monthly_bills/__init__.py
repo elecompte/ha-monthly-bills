@@ -18,7 +18,7 @@ from .const import DOMAIN, SIGNAL_CHANGED, STORE_KEY, STORE_VERSION
 from .model import checked_threshold, correct_last_payment_date, migrate_bill, record_payment, refresh_bill, reopen_bill, roll_bill
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", "number", "date", "switch", "text"]
+PLATFORMS = ["sensor", "number", "date", "switch", "text", "calendar"]
 COST = vol.All(vol.Coerce(float), vol.Range(min=0, max=100000000))
 DATE = vol.Match(r"^\d{4}-\d{2}-\d{2}$")
 THRESHOLD = checked_threshold

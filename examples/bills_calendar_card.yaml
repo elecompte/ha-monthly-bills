@@ -1,0 +1,5 @@
+type: calendar
+title: Bills Due
+initial_view: dayGridMonth
+entities:
+  - calendar.monthly_bills

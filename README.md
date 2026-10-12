@@ -1,6 +1,32 @@
-# Monthly Bills for Home Assistant — v0.3.4
+# Monthly Bills for Home Assistant — v0.3.5
 
 A local, editable monthly bill tracker. This release upgrades the v0.2.3 source and retains the storage key, bill IDs, device identifiers, and all existing entity unique IDs.
+
+## v0.3.5 — Due dates calendar
+
+The integration now creates one read-only **Monthly Bills** calendar, normally `calendar.monthly_bills`. It appears in Home Assistant's Calendar sidebar and can be selected in a native calendar dashboard card.
+
+Each bill's currently stored due date becomes a one-day all-day event. The title includes its name and amount, for example **Rent — $1,400.00**. Event details include the amount, due date, status for that due occurrence, category, last payment date and bill ID. Multiple bills on the same day remain separate events.
+
+Adding/deleting a bill, editing a due date, changing an amount/name/category, correcting a payment date, or recording a payment refreshes calendar subscribers. When auto advance moves the due date, the calendar event moves with it. A previous-cycle Paid acknowledgement does not mark the next calendar occurrence as paid. With auto advance disabled, a paid bill stays on its stored due date with Paid in its description.
+
+This calendar displays actual stored due dates, not forecasts of every future monthly cycle or a payment-history calendar. Overdue bills remain visible on their original due dates when viewing that date range. Edit bills through their existing controls rather than directly in the calendar.
+
+Dashboard card (also included in `examples/bills_calendar_card.yaml`):
+
+```yaml
+type: calendar
+title: Bills Due
+initial_view: dayGridMonth
+entities:
+  - calendar.monthly_bills
+```
+
+For an agenda, use `initial_view: listWeek`. If Home Assistant assigns a different entity ID, select the Monthly Bills calendar's actual ID in the card editor.
+
+Upgrade by committing the package contents to the repository and publishing **0.3.5**. Update through HACS and restart Home Assistant. The calendar platform is set up automatically for the existing integration; do not remove/re-add Monthly Bills. Existing bills, payment history and entity IDs are preserved.
+
+Validation: 39 automated tests passed using in-memory Home Assistant doubles, including calendar date-range boundaries, DST, UTC-to-local conversion, multiple simultaneous due dates, event movement after payment, non-next-event changes, and listener cleanup. Python syntax and JSON/YAML checks also passed. The Calendar API was checked against Home Assistant 2026.9.2 source; live Home Assistant testing is still needed.
 
 ## v0.3.4 — Fix latest-payment date correction
 
