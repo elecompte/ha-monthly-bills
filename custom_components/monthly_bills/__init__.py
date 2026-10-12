@@ -15,6 +15,7 @@ from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, SIGNAL_CHANGED, STORE_KEY, STORE_VERSION
+from .frontend import async_register_frontend
 from .model import checked_threshold, correct_last_payment_date, migrate_bill, record_payment, refresh_bill, reopen_bill, roll_bill
 
 _LOGGER = logging.getLogger(__name__)
@@ -198,6 +199,7 @@ class BillManager:
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Register actions once, including when no config entry exists yet."""
     hass.data.setdefault(DOMAIN, {})
+    await async_register_frontend(hass)
 
     def manager() -> BillManager:
         managers = hass.data[DOMAIN]

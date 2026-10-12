@@ -1,6 +1,40 @@
-# Monthly Bills for Home Assistant — v0.3.5
+# Monthly Bills for Home Assistant — v0.3.6
 
 A local, editable monthly bill tracker. This release upgrades the v0.2.3 source and retains the storage key, bill IDs, device identifiers, and all existing entity unique IDs.
+
+## v0.3.6 — Add Bill dashboard badge
+
+A bundled frontend component adds a badge that opens a form for creating a bill. It uses the existing `monthly_bills.add_bill` action and requires no Browser Mod, helper entities or additional HACS frontend download. The integration automatically serves and loads the versioned JavaScript module at startup using Home Assistant's frontend API. Do not also add it as a dashboard resource.
+
+Upgrade through the same repository/release workflow using version **0.3.6**, then update in HACS, restart Home Assistant, and refresh your browser. Keep the existing integration configured.
+
+Add this to the desired view's `badges:` list (not to `button_card_templates:`):
+
+```yaml
+badges:
+  - type: custom:monthly-bills-add-badge
+    name: Add bill
+    icon: mdi:plus
+```
+
+The same badge is registered in the badge picker as **Monthly Bills: Add bill**. The standalone badge config is also provided in `examples/add_bill_badge.yaml`. No entity ID is needed.
+
+The form collects bill name, amount in USD, next due date, category, auto-advance and upcoming threshold. Auto-advance defaults On and threshold defaults to 7 days. Dates default to today in Home Assistant's configured time zone. You can override form defaults in the badge YAML:
+
+```yaml
+type: custom:monthly-bills-add-badge
+name: Add bill
+icon: mdi:plus
+default_category: Utilities
+default_auto_advance: true
+default_upcoming_threshold: 7
+```
+
+Click **Add bill** to save. While saving, duplicate submissions and dialog cancellation are blocked. On success the form closes and a confirmation is announced. Existing integration updates create the new bill entities and refresh the calendar. Failed saves display the error and keep your entered values. A new bill is unpaid; entering a due date does not record a payment. The badge is disabled until the integration's Add Bill action is available.
+
+If the badge type is not found after restart, hard-refresh the browser (Ctrl+F5). Check Home Assistant logs for Monthly Bills startup errors if it remains unavailable. The bundle uses a guard against duplicate custom-element registration.
+
+Validation: 40 Python tests and 12 JavaScript DOM tests passed, including service payloads, failed saves/retry, double-click protection, input validation, dialog defaults, state updates, registration and cleanup. JavaScript DOM tests use jsdom with a native-dialog test double; this is not live Home Assistant testing. Run the Python suite with `python3 -m unittest discover -s tests -v`. For frontend tests, install jsdom as a development dependency (`npm install --no-save jsdom`) and run `node --test tests/test_badge.cjs`. Python/JavaScript syntax, JSON/YAML and manifest checks passed. Live Home Assistant/browser verification is still needed.
 
 ## v0.3.5 — Due dates calendar
 
