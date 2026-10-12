@@ -13,6 +13,7 @@ ADD_FORM = vol.Schema({
     vol.Required("due_date"): selector.DateSelector(),
     vol.Optional("category", default="Other"): selector.TextSelector(),
     vol.Optional("auto_advance_due_date", default=True): selector.BooleanSelector(),
+    vol.Optional("autopay", default=False): selector.BooleanSelector(),
     vol.Optional("upcoming_threshold_days", default=7): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=30, step=1, mode=selector.NumberSelectorMode.BOX)),
 })
 
@@ -55,6 +56,7 @@ class MonthlyBillsOptionsFlow(config_entries.OptionsFlow):
                         vol.Required("due_date", description={"suggested_value": str(user_input.get("due_date", ""))}): selector.DateSelector(),
                         vol.Optional("category", default="Other", description={"suggested_value": user_input.get("category", "Other")}): selector.TextSelector(),
                         vol.Optional("auto_advance_due_date", default=user_input.get("auto_advance_due_date", True)): selector.BooleanSelector(),
+                        vol.Optional("autopay", default=user_input.get("autopay", False)): selector.BooleanSelector(),
                         vol.Optional("upcoming_threshold_days", default=user_input.get("upcoming_threshold_days", 7)): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=30, step=1, mode=selector.NumberSelectorMode.BOX)),
                     }),
                     errors={"base": "add_failed"},

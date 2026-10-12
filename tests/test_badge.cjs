@@ -53,6 +53,7 @@ test("badge opens one dialog with defaults and input focus", () => {
   assert.equal(env.window.document.querySelectorAll("monthly-bills-add-dialog").length, 1);
   assert.equal(dialog._field("category").value, "Other");
   assert.equal(dialog._field("auto_advance_due_date").checked, true);
+  assert.equal(dialog._field("autopay").checked, false);
   assert.equal(dialog._field("upcoming_threshold_days").value, "7");
   assert.match(dialog._field("due_date").value, /^\d{4}-\d{2}-\d{2}$/);
   assert.equal(dialog.shadowRoot.activeElement.name, "name");
@@ -69,6 +70,7 @@ test("successful submit sends correct service data and removes dialog", async ()
     "monthly_bills", "add_bill", {
       name: "Rent", cost: 1400.25, due_date: "2026-11-01", category: "Other",
       auto_advance_due_date: true, upcoming_threshold_days: 7,
+      autopay: false,
     },
   ]]);
   assert.equal(env.badge._dialog, null);
@@ -187,14 +189,17 @@ test("configuration defaults and labels use safe text rendering", () => {
     name: "<img src=x onerror=alert(1)>",
     default_category: "Utilities", default_auto_advance: false,
     default_upcoming_threshold: 14,
+    default_autopay: true,
   });
   assert.equal(env.badge.shadowRoot.querySelector("img"), null);
   const dialog = env.open();
   assert.equal(dialog._field("category").value, "Utilities");
   assert.equal(dialog._field("auto_advance_due_date").checked, false);
   assert.equal(dialog._field("upcoming_threshold_days").value, "14");
+  assert.equal(dialog._field("autopay").checked, true);
   assert.throws(() => env.badge.setConfig({ default_upcoming_threshold: 7.5 }));
   assert.throws(() => env.badge.setConfig({ default_auto_advance: "false" }));
+  assert.throws(() => env.badge.setConfig({ default_autopay: "false" }));
   env.dom.window.close();
 });
 

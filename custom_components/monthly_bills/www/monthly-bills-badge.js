@@ -69,6 +69,10 @@
                 <input name="category" type="text" maxlength="100" autocomplete="off">
               </label>
               <label class="check">
+                <input name="autopay" type="checkbox">
+                Autopay enabled with the bill provider
+              </label>
+              <label class="check">
                 <input name="auto_advance_due_date" type="checkbox">
                 Advance due date when marked paid
               </label>
@@ -112,6 +116,7 @@
       this._field("due_date").value = localToday(hass);
       this._field("category").value = config.default_category || "Other";
       this._field("auto_advance_due_date").checked = config.default_auto_advance ?? true;
+      this._field("autopay").checked = config.default_autopay ?? false;
       this._field("upcoming_threshold_days").value = config.default_upcoming_threshold ?? 7;
       this._dialog.showModal();
       this._field("name").focus();
@@ -143,6 +148,7 @@
         name, cost, due_date: due,
         category: this._field("category").value.trim() || "Other",
         auto_advance_due_date: this._field("auto_advance_due_date").checked,
+        autopay: this._field("autopay").checked,
         upcoming_threshold_days: threshold,
       };
     }
@@ -216,6 +222,9 @@
       }
       if (config.default_auto_advance != null && typeof config.default_auto_advance !== "boolean") {
         throw new Error("default_auto_advance must be true or false.");
+      }
+      if (config.default_autopay != null && typeof config.default_autopay !== "boolean") {
+        throw new Error("default_autopay must be true or false.");
       }
       this._config = { ...config };
       this.shadowRoot.querySelector("button span").textContent = config.name || "Add bill";

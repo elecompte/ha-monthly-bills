@@ -39,6 +39,11 @@ add_bill:
       name: Category
       selector:
         text: {}
+    autopay:
+      name: Autopay
+      description: Tracks whether autopay is enabled with your bill provider.
+      selector:
+        boolean: {}
     auto_advance_due_date:
       name: Automatically advance due date
       selector:
@@ -80,6 +85,11 @@ update_bill:
       name: Category
       selector:
         text: {}
+    autopay:
+      name: Autopay
+      description: Tracks whether autopay is enabled with your bill provider.
+      selector:
+        boolean: {}
     auto_advance_due_date:
       name: Automatically advance due date
       selector:

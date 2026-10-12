@@ -293,4 +293,50 @@ class ManagerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(after['last_paid_due_date'],'2026-09-01')
         self.assertEqual(after['history'][-1]['paid_on'],'2026-09-30')
 
+class AutopayTests(unittest.IsolatedAsyncioTestCase):
+    async def test_migration_infers_automatic_category_once(self):
+        b=bill();b.pop('autopay',None);b['category']='Automatic'
+        upgraded=model.migrate_bill(b)
+        self.assertTrue(upgraded['autopay'])
+        upgraded['autopay']=False
+        self.assertFalse(model.migrate_bill(upgraded)['autopay'])
+        self.assertEqual(upgraded['category'],'Automatic')
+
+    async def test_autopay_toggle_preserves_payment_and_billing_cycle(self):
+        clock.today=date(2026,10,1)
+        manager=BillManager(object())
+        await manager.add(dict(name='Rent',cost=1400,due_date='2026-10-01'))
+        await manager.set_paid('rent',True)
+        before=dict(manager.bills['rent'])
+        await manager.update(dict(bill_id='rent',autopay=True))
+        after=manager.bills['rent']
+        self.assertTrue(after['autopay'])
+        for key,value in before.items():
+            if key!='autopay': self.assertEqual(after[key],value)
+        restarted=BillManager(object());restarted.store=manager.store
+        await restarted.load()
+        self.assertTrue(restarted.bills['rent']['autopay'])
+        await restarted.update(dict(bill_id='rent',autopay=False))
+        self.assertFalse(restarted.bills['rent']['autopay'])
+
+    async def test_new_bills_allow_autopay_and_default_off(self):
+        manager=BillManager(object())
+        await manager.add(dict(name='Rent',cost=1400,due_date='2026-11-01',autopay=True))
+        await manager.add(dict(name='Internet',cost=100,due_date='2026-11-01'))
+        self.assertTrue(manager.bills['rent']['autopay'])
+        self.assertFalse(manager.bills['internet']['autopay'])
+        await manager.update(dict(bill_id='rent',category='Housing'))
+        self.assertTrue(manager.bills['rent']['autopay'])
+
+    async def test_autopay_does_not_automatically_record_payment(self):
+        clock.today=date(2026,10,12)
+        manager=BillManager(object())
+        await manager.add(dict(name='Rent',cost=1400,due_date='2026-10-01',autopay=True))
+        await manager.daily_tick()
+        b=manager.bills['rent']
+        self.assertFalse(b['paid'])
+        self.assertEqual(b['due_date'],'2026-10-01')
+        self.assertEqual(b['history'],[])
+        self.assertEqual(model.status_for(b,clock.today),'Past Due')
+
 if __name__=='__main__': unittest.main()

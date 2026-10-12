@@ -8,6 +8,7 @@ from .bill_entity import BillEntity, setup_bill_entities
 async def async_setup_entry(hass, entry, async_add_entities):
     setup_bill_entities(hass, entry, async_add_entities, BillPaid)
     setup_bill_entities(hass, entry, async_add_entities, BillAutoAdvance)
+    setup_bill_entities(hass, entry, async_add_entities, BillAutopay)
 
 class BillPaid(BillEntity, SwitchEntity):
     _attr_name = "Paid"
@@ -40,3 +41,22 @@ class BillAutoAdvance(BillEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs):
         await self.manager.update({"bill_id": self.bill_id, "auto_advance_due_date": False})
+
+
+class BillAutopay(BillEntity, SwitchEntity):
+    """Track whether the bill is paid automatically by its provider."""
+    _attr_name = "Autopay"
+    _attr_icon = "mdi:credit-card-sync"
+
+    def __init__(self, manager, bill_id):
+        super().__init__(manager, bill_id, "autopay")
+
+    @property
+    def is_on(self):
+        return self.bill["autopay"] if self.available else None
+
+    async def async_turn_on(self, **kwargs):
+        await self.manager.update({"bill_id": self.bill_id, "autopay": True})
+
+    async def async_turn_off(self, **kwargs):
+        await self.manager.update({"bill_id": self.bill_id, "autopay": False})

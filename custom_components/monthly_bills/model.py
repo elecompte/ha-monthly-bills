@@ -17,6 +17,7 @@ def migrate_bill(bill: dict) -> dict:
     """Add fields without changing dates, identifiers, payments or history."""
     bill = deepcopy(bill)
     bill.setdefault("auto_advance_due_date", True)
+    bill.setdefault("autopay", str(bill.get("category", "")).strip().casefold() == "automatic")
     bill.setdefault("upcoming_threshold_days", DEFAULT_THRESHOLD)
     previous_paid = next((item.get("paid_on") for item in reversed(bill.get("history", []))
                           if item.get("paid_on")), None)

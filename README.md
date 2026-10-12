@@ -1,6 +1,29 @@
-# Monthly Bills for Home Assistant — v0.3.6
+# Monthly Bills for Home Assistant — v0.3.7
 
 A local, editable monthly bill tracker. This release upgrades the v0.2.3 source and retains the storage key, bill IDs, device identifiers, and all existing entity unique IDs.
+
+## v0.3.7 — Autopay toggle for every bill
+
+Each bill now has an **Autopay** switch, normally `switch.rent_autopay`. It records whether you have enabled automatic payment with the bill provider. This is independent of the Paid and Auto advance switches: toggling Autopay does not record a payment, advance a due date, or initiate a payment. Existing payment/status behavior continues unchanged.
+
+The first upgrade initializes Autopay On for existing bills categorized as **Automatic** (case-insensitive, trimmed), and Off otherwise. Explicitly saved Autopay values are preserved on later restarts. The category itself remains unchanged. After migration, Autopay and category are separate fields; changing one does not overwrite the other.
+
+New bills default to Autopay Off. The native Add Bill form and dashboard badge dialog include the toggle. Badge configuration supports `default_autopay: true` if you want new bills to default On.
+
+The status sensor exposes an `autopay` boolean, and calendar event descriptions show Autopay Yes/No. You can set it through its native switch or the existing actions:
+
+```yaml
+action: monthly_bills.update_bill
+data:
+  bill_id: rent
+  autopay: true
+```
+
+Upload the package contents, commit and publish **0.3.7**, update through HACS, restart Home Assistant and refresh the browser. If you added a manual badge resource after v0.3.6, update its URL to `/monthly_bills_static/monthly-bills-badge.js?v=0.3.7` so the new form fields load.
+
+The saved bill-card template provided separately reads `switch.<bill_id>_autopay` for its AUTOPAY label. Its category-based fallback keeps the label working before the integration upgrade. Existing icon/lock/PIN styling remains as supplied by the user.
+
+Validation includes migration, explicit false preservation, toggle persistence, category independence, unchanged payment fields, and no automatic payment recording. Frontend tests verify the new checkbox default, configurable default and service payload. All 44 Python tests and 12 frontend DOM tests pass. Live Home Assistant verification is still needed.
 
 ## v0.3.6 — Add Bill dashboard badge
 

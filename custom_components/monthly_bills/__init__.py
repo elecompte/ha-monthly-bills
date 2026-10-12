@@ -31,6 +31,7 @@ ADD_SCHEMA = vol.Schema({
     vol.Required("due_date"): DATE,
     vol.Optional("category", default="Other"): str,
     vol.Optional("auto_advance_due_date", default=True): bool,
+    vol.Optional("autopay", default=False): bool,
     vol.Optional("upcoming_threshold_days", default=7): THRESHOLD,
 })
 UPDATE_SCHEMA = vol.Schema({
@@ -40,6 +41,7 @@ UPDATE_SCHEMA = vol.Schema({
     vol.Optional("due_date"): DATE,
     vol.Optional("category"): str,
     vol.Optional("auto_advance_due_date"): bool,
+    vol.Optional("autopay"): bool,
     vol.Optional("upcoming_threshold_days"): THRESHOLD,
 })
 TARGET_SCHEMA = vol.Schema({vol.Required("bill_id"): ID})
@@ -109,6 +111,7 @@ class BillManager:
                 "paid_on": None,
                 "history": [],
                 "auto_advance_due_date": bool(data.get("auto_advance_due_date", True)),
+                "autopay": bool(data.get("autopay", False)),
                 "upcoming_threshold_days": THRESHOLD(data.get("upcoming_threshold_days", 7)),
                 "last_paid_on": None,
                 "last_paid_due_date": None,
@@ -141,6 +144,8 @@ class BillManager:
                     bill["due_day"] = due.day
             if "auto_advance_due_date" in data:
                 bill["auto_advance_due_date"] = bool(data["auto_advance_due_date"])
+            if "autopay" in data:
+                bill["autopay"] = bool(data["autopay"])
             if "upcoming_threshold_days" in data:
                 bill["upcoming_threshold_days"] = THRESHOLD(data["upcoming_threshold_days"])
             self.bills[data["bill_id"]] = refresh_bill(bill, dt_util.now().date())

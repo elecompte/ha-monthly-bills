@@ -4,7 +4,7 @@ from pathlib import Path
 from homeassistant.components import frontend
 from homeassistant.components.http import StaticPathConfig
 
-FRONTEND_VERSION = "0.3.6"
+FRONTEND_VERSION = "0.3.7"
 STATIC_URL = "/monthly_bills_static"
 BADGE_URL = f"{STATIC_URL}/monthly-bills-badge.js?v={FRONTEND_VERSION}"
 

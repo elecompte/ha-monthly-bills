@@ -1,7 +1,7 @@
 {
   "domain": "monthly_bills",
   "name": "Monthly Bills",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "documentation": "https://github.com/elecompte/ha-monthly-bills",
   "issue_tracker": "https://github.com/elecompte/ha-monthly-bills/issues",
   "codeowners": ["@elecompte"],

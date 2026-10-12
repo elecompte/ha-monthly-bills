@@ -25,5 +25,5 @@ class FrontendRegistrationTests(unittest.IsolatedAsyncioTestCase):
         hass = SimpleNamespace(http=SimpleNamespace(async_register_static_paths=register))
         await namespace["async_register_frontend"](hass)
         self.assertEqual(paths, [("/monthly_bills_static", str(ROOT / "www"), False)])
-        self.assertEqual(modules, ["/monthly_bills_static/monthly-bills-badge.js?v=0.3.6"])
+        self.assertEqual(modules, ["/monthly_bills_static/monthly-bills-badge.js?v=0.3.7"])
         self.assertTrue((ROOT / "www/monthly-bills-badge.js").is_file())

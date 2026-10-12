@@ -25,6 +25,7 @@ class BillStatus(BillEntity, SensorEntity):
                 "due_date": bill["due_date"], "payment_status": status_for(bill, dt_util.now().date()),
                 "category": bill["category"], "paid": paid_for_display(bill, dt_util.now().date()), "paid_on": bill["paid_on"],
                 "auto_advance_due_date": bill["auto_advance_due_date"],
+                "autopay": bill["autopay"],
                 "upcoming_threshold_days": bill["upcoming_threshold_days"],
                 "last_paid_on": bill["last_paid_on"], "last_paid_due_date": bill["last_paid_due_date"],
                 "recurring": "monthly", "payment_history": list(bill.get("history", []))}

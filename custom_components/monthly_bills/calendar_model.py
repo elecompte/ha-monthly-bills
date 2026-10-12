@@ -21,6 +21,7 @@ def bill_events(bills: dict[str, dict], today: date) -> list[dict]:
             f'Due date: {due.isoformat()}\n'
             f'Status: {status}\n'
             f'Category: {bill.get("category", "Other")}\n'
+            f'Autopay: {"Yes" if bill.get("autopay", False) else "No"}\n'
             f'Last payment: {bill.get("last_paid_on") or "Not recorded"}\n'
             f'Bill ID: {bill_id}'
         )
